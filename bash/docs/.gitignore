@@ -1,5 +1,0 @@
-# Ignore everything in this directory
-# nuke the following rule once real content needs to be tracked
-*
-# Don't ignore the ignore file
-!.gitignore
