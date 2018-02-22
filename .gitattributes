@@ -1,0 +1,3 @@
+# Auto detect text files and perform LF normalization
+powershell/*  eol=crlf
+* text=auto eol=lf
