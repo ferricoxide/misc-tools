@@ -1,0 +1,26 @@
+language: shell
+env:
+  global:
+    - LD_PRELOAD=/lib/x86_64-linux-gnu/libSegFault.so
+    - SEGFAULT_SIGNALS=all
+
+matrix:
+  include:
+    - env:
+        - TESTENV=shellcheck
+        - TESTCOMMAND="find $TRAVIS_BUILD_DIR -name '*.sh' -type f -print0 | xargs -0 -n1 -t shellcheck"
+        - SHELLCHECK_OPTS="-s bash"
+
+before_install:
+  - echo $TESTCOMMAND
+  - shellcheck --version
+
+install: true
+
+script:
+  - bash -c "$TESTCOMMAND"
+
+notifications:
+  email:
+    on_success: never
+    on_failure: always
