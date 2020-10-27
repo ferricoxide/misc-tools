@@ -1,5 +1,7 @@
 #!/bin/bash
 #
+# shellcheck disable=SC2016,SC2003
+#
 # Really ugly script to perform ad hoc storage-reporting against
 # S3 buckets with lifecycle storage policies attached
 #
@@ -12,50 +14,52 @@ BUCKET=${QUERYBUCKET:-UNDEF}
 COUNT=0
 
 GlacierCompute() {
-   COUNT=$((${COUNT} + 1))
+   COUNT=$(( COUNT + 1))
 
    if [ "${1}" = "" ]
    then
       NXTOKN=$(
-          aws --profile ${PROFILE} --region ${REGION} s3api list-objects-v2 \
-          --page-size ${PAGESZ} --max-items ${MAXITM} --bucket ${BUCKET} \
-          --query 'NextToken' | sed 's/"//g'
-         )
+         aws --profile "${PROFILE}" --region "${REGION}" s3api list-objects-v2 \
+	   --page-size "${PAGESZ}" --max-items "${MAXITM}" --bucket "${BUCKET}" \
+	   --query 'NextToken' | sed 's/"//g'
+      )
       SIZE=$(
-          aws --profile ${PROFILE} --region ${REGION} s3api list-objects-v2 \
-          --page-size ${PAGESZ} --max-items ${MAXITM} --bucket ${BUCKET} \
-          --query 'Contents[?StorageClass==`GLACIER`].Size' |
-          sed -e 's/,//' -e '/[][]/d' -e 's/^[  ][      ]//' -e '/^$/d' |
-          awk '{ sum += $1 } END { print sum }'
-         )
+         aws --profile "${PROFILE}" --region "${REGION}" s3api list-objects-v2 \
+           --page-size "${PAGESZ}" --max-items "${MAXITM}" \
+	   --bucket "${BUCKET}" \
+	   --query 'Contents[?StorageClass==`GLACIER`].Size' |
+           sed -e 's/,//' -e '/[][]/d' -e 's/^[  ][      ]//' -e '/^$/d' |
+           awk '{ sum += $1 } END { print sum }'
+      )
 
       printf "Chunk #%s: \t%15s\n" "${COUNT}" "${SIZE}"
 
       GlacierCompute "${NXTOKN}" "${SIZE}"
     else
       SIZE=$(
-          aws --profile ${PROFILE} --region ${REGION} s3api list-objects-v2 \
-          --starting-token "${NXTOKN}" \
-          --page-size ${PAGESZ} --max-items ${MAXITM} --bucket ${BUCKET} \
-          --query 'Contents[?StorageClass==`GLACIER`].Size' |
-          sed -e 's/,//' -e '/[][]/d' -e 's/^[  ][      ]//' -e '/^$/d' |
-          awk '{ sum += $1 } END { print sum }'
-         )
+         aws --profile "${PROFILE}" --region "${REGION}" s3api list-objects-v2 \
+           --starting-token "${NXTOKN}" \
+           --page-size "${PAGESZ}" --max-items "${MAXITM}" \
+	   --bucket "${BUCKET}" \
+           --query 'Contents[?StorageClass==`GLACIER`].Size' |
+           sed -e 's/,//' -e '/[][]/d' -e 's/^[  ][      ]//' -e '/^$/d' |
+           awk '{ sum += $1 } END { print sum }'
+      )
       NXTOKN=$(
-          aws --profile ${PROFILE} --region ${REGION} s3api list-objects-v2 \
-          --starting-token "${NXTOKN}" \
-          --page-size ${PAGESZ} --max-items ${MAXITM} --bucket ${BUCKET} \
-          --query 'NextToken' | sed 's/"//g'
-         )
+         aws --profile "${PROFILE}" --region "${REGION}" s3api list-objects-v2 \
+           --starting-token "${NXTOKN}" --page-size "${PAGESZ}" \
+	   --max-items "${MAXITM}" --bucket "${BUCKET}" \
+           --query 'NextToken' | sed 's/"//g'
+      )
       if [ "${SIZE}" = "" ]
       then
          SIZE=0
       fi
 
-      TOTSIZE=$( expr $2 + ${SIZE} )
-      TOTSIZEINK=$( expr ${TOTSIZE} / 1024 )
-      TOTSIZEINM=$( expr ${TOTSIZEINK} / 1024 )
-      TOTSIZEING=$( expr ${TOTSIZEINM} / 1024 )
+      TOTSIZE=$(( $2 + SIZE ))
+      TOTSIZEINK=$( expr "${TOTSIZE}" / 1024 )
+      TOTSIZEINM=$( expr "${TOTSIZEINK}" / 1024 )
+      TOTSIZEING=$( expr "${TOTSIZEINM}" / 1024 )
       printf "Chunk #%s: \t" "${COUNT}"
       printf "%15s + %15s + %15s (%sGiB)\n" "$2" "${SIZE}" "${TOTSIZE}" "${TOTSIZEING}"
 
